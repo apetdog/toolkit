@@ -1,0 +1,6 @@
+{
+  "require": {
+    "qcloud/cos-sdk-v5": ">=2.0",
+    "vlucas/phpdotenv": "^5.3"
+  }
+}
