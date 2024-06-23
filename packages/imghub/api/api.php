@@ -38,7 +38,7 @@ if (isset($routes[$method])) {
   foreach ($routes[$method] as $route => $handler) {
     if ($route[0] === '#') {
       if (preg_match($route, $path, $matches)) {
-        $handler($matches[1]);
+        $handler(isset($matches[1]) ? $matches[1] : null);
         exit;
       }
     } elseif ($route === $path) {
@@ -80,7 +80,7 @@ function listImages($cosClient, $config)
     $response = [
       'success' => true,
       'images' => $images,
-      'isTruncated' => $result['IsTurncated'],
+      'isTruncated' => $result['IsTurncated'] ?? null,
       'nextMarker' => $result['NextMarker'] ?? null,
     ];
 
