@@ -24,7 +24,7 @@ error_log("Request Method: $method, Path: $path");
 
 $routes = [
   'GET' => [
-    '/list' => fn() => listImages($cosClient, $config)
+    '#^/list(\?.*)?$#' => fn() => listImages($cosClient, $config)
   ],
   'POST' => [
     '/upload' => fn() => uploadImage($cosClient, $config)
@@ -54,9 +54,14 @@ echo json_encode(['success' => false, 'error' => 'Not Found']);
 function listImages($cosClient, $config)
 {
   try {
+    $marker = $_GET['marker'] ?? '';
+    $limit = isset($_GET['limit']) ? (int) $_GET['limit'] : 10;
+
     $result = $cosClient->listObjects([
       'Bucket' => $config['bucket'],
-      'Prefix' => $config['uploadDir'] . '/'
+      'Prefix' => $config['uploadDir'] . '/',
+      'Marker' => $marker,
+      'MaxKeys' => $limit,
     ]);
 
     $images = array_map(function ($content) use ($cosClient, $config) {
@@ -72,7 +77,14 @@ function listImages($cosClient, $config)
 
     $images = array_filter($images);
 
-    echo json_encode(['success' => true, 'images' => $images]);
+    $response = [
+      'success' => true,
+      'images' => $images,
+      'isTruncated' => $result['IsTurncated'],
+      'nextMarker' => $result['NextMarker'] ?? null,
+    ];
+
+    echo json_encode($response);
   } catch (Exception $e) {
     http_response_code(500);
     echo json_encode(['success' => false, 'error' => $e->getMessage()]);
@@ -88,7 +100,8 @@ function uploadImage($cosClient, $config)
   }
 
   $file = $_FILES['image'];
-  $fileName = time() . '_' . bin2hex(random_bytes(8)) . '.' . pathinfo($file['name'], PATHINFO_EXTENSION);
+  $fileExtension = pathinfo($file['name'], PATHINFO_EXTENSION);
+  $fileName = time() . '.' . $fileExtension;
 
   try {
     $cosClient->putObject([
