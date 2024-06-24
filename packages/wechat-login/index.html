@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="shortcut icon" href="/public/logo.png" type="image/x-icon" />
+
+    <title>Toolkit | WeChat Login</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script type="importmap">
+      {
+        "imports": {
+          "vue": "https://unpkg.com/vue@3/dist/vue.esm-browser.prod.js"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <div id="app">
+      <div
+        v-if="!user"
+        class="flex flex-col items-center justify-center min-h-screen bg-gray-100"
+      >
+        <h1 class="text-2xl font-bold mb-4">Scan QR Code to Login</h1>
+        <img :src="qrcodeUrl" alt="WeChat QR Code" class="mb-4" />
+        <button
+          @click="login"
+          class="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
+        >
+          Start Login
+        </button>
+      </div>
+      <div
+        v-else
+        class="flex flex-col items-center justify-center min-h-screen bg-gray-100"
+      >
+        <h1 class="text-2xl font-bold mb-4">Welcome, {{ user.nickname }}!</h1>
+        <p class="mb-4">You have successfully logged in.</p>
+        <button
+          @click="logout"
+          class="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
+        >
+          Logout
+        </button>
+      </div>
+    </div>
+
+    <script type="module">
+      import { createApp, ref, onMounted } from "vue";
+
+      const app = {
+        setup() {
+          const user = ref(null);
+          const qrcodeUrl = ref("");
+
+          const checkLoginStatus = async () => {
+            const response = await fetch("/api/index.php?route=user");
+            const result = await response.json();
+            if (result.status === "success" && result.data.user) {
+              user.value = result.data.user;
+            }
+          };
+
+          const login = async () => {
+            const response = await fetch("/api/index.php?route=login");
+            const result = await response.json();
+            if (result.status === "success") {
+              qrcodeUrl.value = result.data.qrcodeUrl;
+              window.open(result.data.qrcodeUrl, "_blank");
+            }
+          };
+
+          const logout = async () => {
+            const response = await fetch("/api/index.php?route=logout");
+            const result = await response.json();
+            if (result.status === "success") {
+              user.value = null;
+            }
+          };
+
+          onMounted(() => {
+            checkLoginStatus();
+          });
+
+          return {
+            user,
+            qrcodeUrl,
+            login,
+            logout,
+          };
+        },
+      };
+
+      createApp(app).mount("#app");
+    </script>
+  </body>
+</html>
