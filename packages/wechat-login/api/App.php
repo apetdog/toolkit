@@ -26,23 +26,16 @@ class App
       'appid' => $_ENV['WECHAT_APPID'],
       'secret' => $_ENV['WECHAT_SECRET'],
       'redirect_uri' => $_ENV['REDIRECT_URI'],
-      'db_host' => $_ENV['DB_HOST'],
-      'db_name' => $_ENV['DB_NAME'],
-      'db_user' => $_ENV['DB_USER'],
-      'db_pass' => $_ENV['DB_PASS'],
+      'db_path' => $_ENV['DB_PATH'] ?? __DIR__ . '/database.sqlite',
     ];
   }
 
   private function connectDb()
   {
     try {
-      $dsn = "mysql:host={$this->config['db_host']};dbname={$this->config['db_name']};charset=utf8mb4";
-      $options = [
-        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-        PDO::ATTR_EMULATE_PREPARES => false,
-      ];
-      $this->pdo = new PDO($dsn, $this->config['db_user'], $this->config['db_pass'], $options);
+      $this->pdo = new PDO("sqlite:{$this->config['db_path']}");
+      $this->pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+      $this->pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
     } catch (PDOException $e) {
       $this->jsonResponse(['error' => 'Database connection failed: ' . $e->getMessage()], 500);
     }
@@ -51,10 +44,10 @@ class App
   private function createTableIfNotExists()
   {
     $sql = "CREATE TABLE IF NOT EXISTS users (
-            id INT(11) AUTO_INCREMENT PRIMARY KEY,
-            openid VARCHAR(255) NOT NULL UNIQUE,
-            nickname VARCHAR(255),
-            avatar VARCHAR(255),
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            openid TEXT NOT NULL UNIQUE,
+            nickname TEXT,
+            avatar TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )";
     $this->pdo->exec($sql);
@@ -96,9 +89,7 @@ class App
 
     $code = $_GET['code'];
 
-    $token_url = "https://api.weixin.qq.com/sns/oauth2/access_token?appid={$this->config['appid']}&secret={$this->config['secret']}&code=$code&grant_type=authorization_code";
-    $response = file_get_contents($token_url);
-    $token_info = json_decode($response, true);
+    $token_info = $this->getAccessToken($code);
 
     if (!isset($token_info['access_token'])) {
       $this->jsonResponse(['error' => 'Failed to get access_token'], 400);
@@ -107,18 +98,17 @@ class App
     $access_token = $token_info['access_token'];
     $openid = $token_info['openid'];
 
-    $user_info_url = "https://api.weixin.qq.com/sns/userinfo?access_token=$access_token&openid=$openid";
-    $user_info_response = file_get_contents($user_info_url);
-    $user_info = json_decode($user_info_response, true);
+    $user_info = $this->getUserInfo($access_token, $openid);
 
     $user = $this->getUserByOpenid($openid);
 
     if (!$user) {
       $user = $this->createUser($user_info);
+    } else {
+      $this->updateUser($user['id'], $user_info);
     }
 
-    session_start();
-    $_SESSION['user_id'] = $user['id'];
+    $this->startSession($user['id']);
 
     header('Location: /');
     exit();
@@ -126,19 +116,18 @@ class App
 
   private function getUser()
   {
-    session_start();
-    if (!isset($_SESSION['user_id'])) {
+    $user_id = $this->getSessionUserId();
+    if (!$user_id) {
       $this->jsonResponse(['user' => null]);
     }
 
-    $user = $this->getUserById($_SESSION['user_id']);
+    $user = $this->getUserById($user_id);
     $this->jsonResponse(['user' => $user]);
   }
 
   private function logout()
   {
-    session_start();
-    session_destroy();
+    $this->destroySession();
     $this->jsonResponse(['success' => true]);
   }
 
@@ -165,6 +154,48 @@ class App
       'avatar' => $user_info['headimgurl']
     ]);
     return $this->getUserByOpenid($user_info['openid']);
+  }
+
+  private function updateUser($id, $user_info)
+  {
+    $stmt = $this->pdo->prepare("UPDATE users SET nickname = :nickname, avatar = :avatar WHERE id = :id");
+    $stmt->execute([
+      'id' => $id,
+      'nickname' => $user_info['nickname'],
+      'avatar' => $user_info['headimgurl']
+    ]);
+  }
+
+  private function getAccessToken($code)
+  {
+    $token_url = "https://api.weixin.qq.com/sns/oauth2/access_token?appid={$this->config['appid']}&secret={$this->config['secret']}&code=$code&grant_type=authorization_code";
+    $response = file_get_contents($token_url);
+    return json_decode($response, true);
+  }
+
+  private function getUserInfo($access_token, $openid)
+  {
+    $user_info_url = "https://api.weixin.qq.com/sns/userinfo?access_token=$access_token&openid=$openid";
+    $user_info_response = file_get_contents($user_info_url);
+    return json_decode($user_info_response, true);
+  }
+
+  private function startSession($user_id)
+  {
+    session_start();
+    $_SESSION['user_id'] = $user_id;
+  }
+
+  private function getSessionUserId()
+  {
+    session_start();
+    return $_SESSION['user_id'] ?? null;
+  }
+
+  private function destroySession()
+  {
+    session_start();
+    session_destroy();
   }
 
   private function jsonResponse($data, $statusCode = 200)

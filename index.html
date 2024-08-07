@@ -68,8 +68,28 @@
             </a>
           </nav>
         </header>
-        <main class="flex-1 flex items-end justify-center uppercase">
-          <div class="w-screen h-[240px] overflow-hidden cursor-default">
+        <main
+          class="flex-1 flex flex-col items-center justify-between uppercase"
+        >
+          <div
+            class="flex-1 px-6 py-8 gap-8 flex flex-wrap items-center justify-center"
+          >
+            <a
+              href="./packages/phpinfo"
+              class="border border-dashed transition-all rounded-lg px-4 py-4 flex items-center justify-center text-2xl text-white/80 cursor-pointer w-[200px] h-[160px] hover:text-white hover:border-dotted hover:bg-black/20"
+            >
+              PHP Info
+            </a>
+            <a
+              href="./packages/imghub"
+              class="border border-dashed transition-all rounded-lg px-4 py-4 flex items-center justify-center text-2xl text-white/80 cursor-pointer w-[200px] h-[160px] hover:text-white hover:border-dotted hover:bg-black/20"
+            >
+              Image Hub
+            </a>
+          </div>
+          <div
+            class="w-screen h-[240px] overflow-hidden cursor-default flex-none"
+          >
             <svg width="100%" height="100%">
               <text
                 x="0"
@@ -80,7 +100,7 @@
                 font-weight="800"
                 stroke-dasharray="4"
                 text-transform="uppercase"
-                stroke="rgba(255,255,255,0.1)"
+                stroke="rgba(255,255,255,0.2)"
                 stroke-width="2px"
                 dominant-baseline="top"
                 class="animate-slide"

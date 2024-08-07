@@ -16,33 +16,35 @@
       }
     </script>
   </head>
-  <body>
+  <body class="bg-gray-100">
     <div id="app">
-      <div
-        v-if="!user"
-        class="flex flex-col items-center justify-center min-h-screen bg-gray-100"
-      >
-        <h1 class="text-2xl font-bold mb-4">Scan QR Code to Login</h1>
-        <img :src="qrcodeUrl" alt="WeChat QR Code" class="mb-4" />
-        <button
-          @click="login"
-          class="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
-        >
-          Start Login
-        </button>
-      </div>
-      <div
-        v-else
-        class="flex flex-col items-center justify-center min-h-screen bg-gray-100"
-      >
-        <h1 class="text-2xl font-bold mb-4">Welcome, {{ user.nickname }}!</h1>
-        <p class="mb-4">You have successfully logged in.</p>
-        <button
-          @click="logout"
-          class="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
-        >
-          Logout
-        </button>
+      <div class="container mx-auto p-4">
+        <h1 class="text-3xl font-bold mb-4">WeChat Login Demo</h1>
+
+        <div v-if="!user">
+          <button
+            @click="login"
+            class="bg-green-500 text-white px-4 py-2 rounded"
+          >
+            Login with WeChat
+          </button>
+        </div>
+
+        <div v-else class="bg-white p-4 rounded shadow">
+          <img
+            :src="user.avatar"
+            :alt="user.nickname"
+            class="w-20 h-20 rounded-full mb-2"
+          />
+          <p class="font-bold">{{ user.nickname }}</p>
+          <p class="text-gray-600">OpenID: {{ user.openid }}</p>
+          <button
+            @click="logout"
+            class="bg-red-500 text-white px-4 py-2 rounded mt-4"
+          >
+            Logout
+          </button>
+        </div>
       </div>
     </div>
 
@@ -52,40 +54,32 @@
       const app = {
         setup() {
           const user = ref(null);
-          const qrcodeUrl = ref("");
 
-          const checkLoginStatus = async () => {
-            const response = await fetch("/api/index.php?route=user");
-            const result = await response.json();
-            if (result.status === "success" && result.data.user) {
-              user.value = result.data.user;
+          const fetchUser = async () => {
+            const response = await fetch("/index.php?route=user");
+            const data = await response.json();
+            if (data.status === "success" && data.data.user) {
+              user.value = data.data.user;
             }
           };
 
           const login = async () => {
-            const response = await fetch("/api/index.php?route=login");
-            const result = await response.json();
-            if (result.status === "success") {
-              qrcodeUrl.value = result.data.qrcodeUrl;
-              window.open(result.data.qrcodeUrl, "_blank");
+            const response = await fetch("/index.php?route=login");
+            const data = await response.json();
+            if (data.status === "success" && data.data.qrcodeUrl) {
+              window.location.href = data.data.qrcodeUrl;
             }
           };
 
           const logout = async () => {
-            const response = await fetch("/api/index.php?route=logout");
-            const result = await response.json();
-            if (result.status === "success") {
-              user.value = null;
-            }
+            await fetch("/index.php?route=logout");
+            user.value = null;
           };
 
-          onMounted(() => {
-            checkLoginStatus();
-          });
+          onMounted(fetchUser);
 
           return {
             user,
-            qrcodeUrl,
             login,
             logout,
           };
