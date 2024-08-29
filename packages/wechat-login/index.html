@@ -56,7 +56,7 @@
           const user = ref(null);
 
           const fetchUser = async () => {
-            const response = await fetch("/index.php?route=user");
+            const response = await fetch("/api/index.php?route=user");
             const data = await response.json();
             if (data.status === "success" && data.data.user) {
               user.value = data.data.user;
@@ -64,7 +64,7 @@
           };
 
           const login = async () => {
-            const response = await fetch("/index.php?route=login");
+            const response = await fetch("/api/index.php?route=login");
             const data = await response.json();
             if (data.status === "success" && data.data.qrcodeUrl) {
               window.location.href = data.data.qrcodeUrl;
@@ -72,7 +72,7 @@
           };
 
           const logout = async () => {
-            await fetch("/index.php?route=logout");
+            await fetch("/api/index.php?route=logout");
             user.value = null;
           };
 
